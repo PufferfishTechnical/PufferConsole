@@ -23,23 +23,16 @@
 
       steps:
         - name: Checkout from Bitbucket
-          run: |
-            git clone --depth 1 --branch ${{ inputs.branch }} \
-              https://${{ secrets.BITBUCKET_USERNAME }}:${{ secrets.BITBUCKET_APP_PASSWORD
-  }}@bitbucket.org/pufferfishdisplays/PufferConsole.git .
+          run: git clone --depth 1 --branch ${{ inputs.branch }} https://${{ secrets.BITBUCKET_USERNAME
+   }}:${{ secrets.BITBUCKET_APP_PASSWORD }}@bitbucket.org/pufferfishdisplays/PufferConsole.git .
 
         - name: Build Docker image
-          run: |
-            cd BuildSystem/gentoo
-            DOCKER_BUILDKIT=0 docker build -t puffer-builder -f docker/Dockerfile.build .
+          run: cd BuildSystem/gentoo && DOCKER_BUILDKIT=0 docker build -t puffer-builder -f
+  docker/Dockerfile.build .
 
         - name: Build PufferConsole bundle
-          run: |
-            docker run --privileged \
-              -v ${{ github.workspace }}:/repo \
-              -w /repo/BuildSystem/gentoo \
-              puffer-builder \
-              make bundle ARCH=${{ inputs.arch }}
+          run: docker run --privileged -v ${{ github.workspace }}:/repo -w /repo/BuildSystem/gentoo
+  puffer-builder make bundle ARCH=${{ inputs.arch }}
 
         - name: Upload RAUC bundle
           uses: actions/upload-artifact@v4
@@ -62,10 +55,8 @@
 
       steps:
         - name: Checkout from Bitbucket
-          run: |
-            git clone --depth 1 --branch ${{ inputs.branch }} \
-              https://${{ secrets.BITBUCKET_USERNAME }}:${{ secrets.BITBUCKET_APP_PASSWORD
-  }}@bitbucket.org/pufferfishdisplays/PufferConsole.git .
+          run: git clone --depth 1 --branch ${{ inputs.branch }} https://${{ secrets.BITBUCKET_USERNAME
+   }}:${{ secrets.BITBUCKET_APP_PASSWORD }}@bitbucket.org/pufferfishdisplays/PufferConsole.git .
 
         - name: Download bundle artifact
           uses: actions/download-artifact@v4
@@ -80,17 +71,12 @@
             path: BuildSystem/gentoo/output/rootfs/
 
         - name: Build Docker image
-          run: |
-            cd BuildSystem/gentoo
-            DOCKER_BUILDKIT=0 docker build -t puffer-builder -f docker/Dockerfile.build .
+          run: cd BuildSystem/gentoo && DOCKER_BUILDKIT=0 docker build -t puffer-builder -f
+  docker/Dockerfile.build .
 
         - name: Build USB installer
-          run: |
-            docker run --privileged \
-              -v ${{ github.workspace }}:/repo \
-              -w /repo/BuildSystem/gentoo \
-              puffer-builder \
-              make installer ARCH=${{ inputs.arch }}
+          run: docker run --privileged -v ${{ github.workspace }}:/repo -w /repo/BuildSystem/gentoo
+  puffer-builder make installer ARCH=${{ inputs.arch }}
 
         - name: Upload USB installer
           uses: actions/upload-artifact@v4
