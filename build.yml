@@ -1,0 +1,22 @@
+image: docker:24
+
+pipelines:
+  custom:
+    build-bundle-x86:
+      - step:
+          name: Build x86_64 Bundle
+          size: 2x
+          services:
+            - docker
+          script:
+            - export DOCKER_BUILDKIT=0
+            - docker build -t puffer-builder -f BuildSystem/gentoo/docker/Dockerfile.build BuildSystem/gentoo
+            - docker run -v $PWD:/repo -w /repo/BuildSystem/gentoo puffer-builder make bundle ARCH=x86_64
+          artifacts:
+            - BuildSystem/gentoo/output/bundles/*
+            - BuildSystem/gentoo/output/rootfs/*
+
+definitions:
+  services:
+    docker:
+      memory: 7168
