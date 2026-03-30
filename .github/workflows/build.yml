@@ -1,106 +1,46 @@
 name: Build PufferConsole Linux Bundle
 
-  on:
-    workflow_dispatch:
-      inputs:
-        arch:
-          description: 'Target architecture'
-          required: true
-          default: 'x86_64'
-          type: choice
-          options:
-            - x86_64
-            - aarch64
-        branch:
-          description: 'Bitbucket branch to build'
-          required: true
-          default: 'master'
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: Target architecture
+        required: true
+        default: x86_64
+        type: choice
+        options:
+          - x86_64
+          - aarch64
+      branch:
+        description: Bitbucket branch to build
+        required: true
+        default: master
 
-  jobs:
-    build-bundle:
-      runs-on: ubuntu-latest
-      timeout-minutes: 120
-      env:
-        ARCH: ${{ inputs.arch }}
-        BRANCH: ${{ inputs.branch }}
-
-      steps:
-        - name: Setup SSH
-          run: |
-            mkdir -p ~/.ssh
-            echo "${{ secrets.BITBUCKET_SSH_KEY }}" > ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
-
-        - name: Checkout from Bitbucket
-          run: git clone --depth 1 --branch "$BRANCH"
-  git@bitbucket.org:pufferfishdisplays/PufferConsole.git .
-
-        - name: Build Docker image
-          run: cd BuildSystem/gentoo && DOCKER_BUILDKIT=0 docker build -t puffer-builder -f
-  docker/Dockerfile.build .
-
-        - name: Build PufferConsole bundle
-          run: docker run --privileged -v "$GITHUB_WORKSPACE:/repo" -w /repo/BuildSystem/gentoo
-  puffer-builder make bundle ARCH="$ARCH"
-
-        - name: Upload RAUC bundle
-          uses: actions/upload-artifact@v4
-          with:
-            name: pufferconsole-bundle-${{ inputs.arch }}
-            path: BuildSystem/gentoo/output/bundles/*.raucb
-            retention-days: 30
-
-        - name: Upload rootfs tarball
-          uses: actions/upload-artifact@v4
-          with:
-            name: pufferconsole-rootfs-${{ inputs.arch }}
-            path: BuildSystem/gentoo/output/rootfs/*.tar.gz
-            retention-days: 30
-
-    build-installer:
-      runs-on: ubuntu-latest
-      needs: build-bundle
-      timeout-minutes: 30
-      env:
-        ARCH: ${{ inputs.arch }}
-        BRANCH: ${{ inputs.branch }}
-
-      steps:
-        - name: Setup SSH
-          run: |
-            mkdir -p ~/.ssh
-            echo "${{ secrets.BITBUCKET_SSH_KEY }}" > ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
-
-        - name: Checkout from Bitbucket
-          run: git clone --depth 1 --branch "$BRANCH"
-  git@bitbucket.org:pufferfishdisplays/PufferConsole.git .
-
-        - name: Download bundle artifact
-          uses: actions/download-artifact@v4
-          with:
-            name: pufferconsole-bundle-${{ inputs.arch }}
-            path: BuildSystem/gentoo/output/bundles/
-
-        - name: Download rootfs artifact
-          uses: actions/download-artifact@v4
-          with:
-            name: pufferconsole-rootfs-${{ inputs.arch }}
-            path: BuildSystem/gentoo/output/rootfs/
-
-        - name: Build Docker image
-          run: cd BuildSystem/gentoo && DOCKER_BUILDKIT=0 docker build -t puffer-builder -f
-  docker/Dockerfile.build .
-
-        - name: Build USB installer
-          run: docker run --privileged -v "$GITHUB_WORKSPACE:/repo" -w /repo/BuildSystem/gentoo
-  puffer-builder make installer ARCH="$ARCH"
-
-        - name: Upload USB installer
-          uses: actions/upload-artifact@v4
-          with:
-            name: pufferconsole-installer-${{ inputs.arch }}
-            path: BuildSystem/gentoo/output/installers/*.img
-            retention-days: 30
+jobs:
+  build-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ARCH: ${{ inputs.arch }}
+      BRANCH: ${{ inputs.branch }}
+    steps:
+      - name: Setup SSH
+        run: mkdir -p ~/.ssh && echo "${{ secrets.BITBUCKET_SSH_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa && ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+      - name: Checkout from Bitbucket
+        run: git clone --depth 1 --branch $BRANCH git@bitbucket.org:pufferfishdisplays/PufferConsole.git .
+      - name: Build Docker image
+        run: cd BuildSystem/gentoo && DOCKER_BUILDKIT=0 docker build -t puffer-builder -f docker/Dockerfile.build .
+      - name: Build PufferConsole bundle
+        run: docker run --privileged -v $GITHUB_WORKSPACE:/repo -w /repo/BuildSystem/gentoo puffer-builder make bundle ARCH=$ARCH
+      - name: Upload RAUC bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: pufferconsole-bundle-${{ inputs.arch }}
+          path: BuildSystem/gentoo/output/bundles/*.raucb
+          retention-days: 30
+      - name: Upload rootfs tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: pufferconsole-rootfs-${{ inputs.arch }}
+          path: BuildSystem/gentoo/output/rootfs/*.tar.gz
+          retention-days: 30
