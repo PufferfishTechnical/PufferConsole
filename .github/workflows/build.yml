@@ -1,4 +1,4 @@
-  name: Build PufferConsole Linux Bundle
+name: Build PufferConsole Linux Bundle
 
   on:
     workflow_dispatch:
@@ -20,19 +20,29 @@
     build-bundle:
       runs-on: ubuntu-latest
       timeout-minutes: 120
+      env:
+        ARCH: ${{ inputs.arch }}
+        BRANCH: ${{ inputs.branch }}
 
       steps:
+        - name: Setup SSH
+          run: |
+            mkdir -p ~/.ssh
+            echo "${{ secrets.BITBUCKET_SSH_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+
         - name: Checkout from Bitbucket
-          run: git clone --depth 1 --branch ${{ inputs.branch }} https://${{ secrets.BITBUCKET_USERNAME
-   }}:${{ secrets.BITBUCKET_APP_PASSWORD }}@bitbucket.org/pufferfishdisplays/PufferConsole.git .
+          run: git clone --depth 1 --branch "$BRANCH"
+  git@bitbucket.org:pufferfishdisplays/PufferConsole.git .
 
         - name: Build Docker image
           run: cd BuildSystem/gentoo && DOCKER_BUILDKIT=0 docker build -t puffer-builder -f
   docker/Dockerfile.build .
 
         - name: Build PufferConsole bundle
-          run: docker run --privileged -v ${{ github.workspace }}:/repo -w /repo/BuildSystem/gentoo
-  puffer-builder make bundle ARCH=${{ inputs.arch }}
+          run: docker run --privileged -v "$GITHUB_WORKSPACE:/repo" -w /repo/BuildSystem/gentoo
+  puffer-builder make bundle ARCH="$ARCH"
 
         - name: Upload RAUC bundle
           uses: actions/upload-artifact@v4
@@ -52,11 +62,21 @@
       runs-on: ubuntu-latest
       needs: build-bundle
       timeout-minutes: 30
+      env:
+        ARCH: ${{ inputs.arch }}
+        BRANCH: ${{ inputs.branch }}
 
       steps:
+        - name: Setup SSH
+          run: |
+            mkdir -p ~/.ssh
+            echo "${{ secrets.BITBUCKET_SSH_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+
         - name: Checkout from Bitbucket
-          run: git clone --depth 1 --branch ${{ inputs.branch }} https://${{ secrets.BITBUCKET_USERNAME
-   }}:${{ secrets.BITBUCKET_APP_PASSWORD }}@bitbucket.org/pufferfishdisplays/PufferConsole.git .
+          run: git clone --depth 1 --branch "$BRANCH"
+  git@bitbucket.org:pufferfishdisplays/PufferConsole.git .
 
         - name: Download bundle artifact
           uses: actions/download-artifact@v4
@@ -75,8 +95,8 @@
   docker/Dockerfile.build .
 
         - name: Build USB installer
-          run: docker run --privileged -v ${{ github.workspace }}:/repo -w /repo/BuildSystem/gentoo
-  puffer-builder make installer ARCH=${{ inputs.arch }}
+          run: docker run --privileged -v "$GITHUB_WORKSPACE:/repo" -w /repo/BuildSystem/gentoo
+  puffer-builder make installer ARCH="$ARCH"
 
         - name: Upload USB installer
           uses: actions/upload-artifact@v4
