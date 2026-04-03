@@ -19,7 +19,7 @@ on:
 jobs:
   build-bundle:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 200
     env:
       ARCH: ${{ inputs.arch }}
       BRANCH: ${{ inputs.branch }}
